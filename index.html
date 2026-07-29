@@ -334,7 +334,7 @@ tfoot td{padding:11px 15px;font-weight:900;color:#0c1d73;border-top:2px solid va
 <script>
 Chart.register(ChartDataLabels);
 Chart.defaults.set('plugins.datalabels',{display:false});
-const _SID="1n3VqNYcxq-OSb_TQycK1rhHo759hYPKAYc2ZGl5OqO0", _GID="878696834";
+const _SID="1n3VqNYcxq-OSb_TQycK1rhHo759hYPKAYc2ZGl5OqO0", _GID="1651151863";  // aba LB (Leo Barbosa)
 const _URL=g=>"https://docs.google.com/spreadsheets/d/"+_SID+"/gviz/tq?tqx=out:csv&gid="+g;
 
 function _sp(l){var p=[],c="",q=false;for(var i=0;i<l.length;i++){var ch=l[i];if(ch==='"')q=!q;else if(ch===','&&!q){p.push(c);c="";}else c+=ch;}p.push(c);return p;}
@@ -344,8 +344,8 @@ const pct=v=>v==null||isNaN(v)?'—':(+v).toLocaleString('pt-BR',{minimumFractio
 const S=(id,h)=>{const e=document.getElementById(id);if(e)e.innerHTML=h;};
 function _brlP(s){s=String(s).replace(/R\$\s*/,'').replace(/"/g,'').trim();if(s.includes(',')&&s.includes('.'))s=s.replace(/\./g,'').replace(',','.');else if(s.includes(','))s=s.replace(',','.');return parseFloat(s)||0;}
 function _intP(s){return parseInt(String(s).replace(/[.,\s"]/g,''))||0;}
-const grpOf=c=>{c=c||'';if(/Cartela/i.test(c))return'Cartela';if(/Sacola/i.test(c))return'Sacola';if(/Feira/i.test(c))return'Feira';if(/ONDM/i.test(c))return'ONDM';return'Outros';};
-const cleanCamp=s=>(s||'').replace(/^NF_FB_Engajamento_Whats_/,'').replace(/_/g,' ').trim()||'—';
+const grpOf=c=>{c=c||'';if(/Noivas/i.test(c))return'Noivas';if(/Presencial/i.test(c))return'Presencial';if(/Made.?Tour/i.test(c))return'Made Tour';if(/Geral/i.test(c))return'Geral';return'Outros';};
+const cleanCamp=s=>(s||'').replace(/^(LB|NF)_(FB_)?Engajamento_Whats_/,'').replace(/_/g,' ').trim()||'—';
 const ts=iso=>{const q=iso.split('-');return new Date(+q[0],+q[1]-1,+q[2]);};
 const fmtBR=iso=>{const q=iso.split('-');return q[2]+'/'+q[1]+'/'+q[0];};
 
@@ -359,13 +359,19 @@ function toIso(s){
   return null;
 }
 function parseRows(txt){
+  const lines=txt.split('\n');
+  if(lines.length<2)return[];
+  const hdr=_sp(lines[0]).map(h=>h.replace(/"/g,'').trim().toLowerCase());
+  const find=(...names)=>{for(const n of names){const i=hdr.findIndex(h=>h.indexOf(n)>=0);if(i>=0)return i;}return -1;};
+  const ci={data:find('data'),camp:find('campanha'),pub:find('blico','publico'),cri:find('criativo'),invest:find('investi'),imp:find('impress'),clk:find('clique'),leads:find('lead')};
+  const gv=(p,i)=>i>=0?(p[i]||'').replace(/"/g,''):'';
   const out=[];
-  txt.split('\n').slice(1).forEach(l=>{
+  lines.slice(1).forEach(l=>{
     if(!l.trim())return;
     const p=_sp(l);
-    const iso=toIso(p[0]); if(!iso)return;
-    const camp=(p[1]||'').replace(/"/g,'');
-    out.push({date:iso,camp:camp,grp:grpOf(camp),pub:(p[2]||'').replace(/"/g,''),invest:_brlP(p[3]),imp:_intP(p[4]),clk:_intP(p[5]),leads:_intP(p[6])});
+    const iso=toIso(gv(p,ci.data)); if(!iso)return;
+    const camp=gv(p,ci.camp);
+    out.push({date:iso,camp:camp,grp:grpOf(camp),pub:gv(p,ci.pub)||'—',cri:gv(p,ci.cri)||'—',invest:_brlP(gv(p,ci.invest)),imp:_intP(gv(p,ci.imp)),clk:_intP(gv(p,ci.clk)),leads:_intP(gv(p,ci.leads))});
   });
   return out.sort((a,b)=>a.date.localeCompare(b.date));
 }
@@ -383,7 +389,7 @@ function applyAll(){
   render(data);
 }
 
-const GRP=[['Cartela','br','🏷️'],['Sacola','seg','🛍️'],['Feira','dem','🎪'],['ONDM','b2b','📍'],['Outros','dem','📦']];
+const GRP=[['Noivas','br','💍'],['Presencial','seg','🏫'],['Made Tour','dem','✈️'],['Geral','b2b','🎯'],['Outros','dem','📦']];
 const GRPMAP=Object.fromEntries(GRP.map(g=>[g[0],g]));
 
 function render(data){
@@ -445,7 +451,7 @@ function buildCharts(data){
   }}});
   const by={};data.forEach(r=>{by[r.grp]=(by[r.grp]||0)+r.leads;});
   const gk=Object.keys(by).filter(k=>by[k]>0).sort((a,b)=>by[b]-by[a]);
-  const gc={Cartela:'rgba(24,119,242,.85)',Sacola:'rgba(52,168,83,.85)',Feira:'rgba(38,33,191,.85)',ONDM:'rgba(168,85,247,.85)',Outros:'rgba(245,158,11,.85)'};
+  const gc={Noivas:'rgba(24,119,242,.85)','Presencial':'rgba(52,168,83,.85)','Made Tour':'rgba(38,33,191,.85)',Geral:'rgba(168,85,247,.85)',Outros:'rgba(245,158,11,.85)'};
   const tot=gk.reduce((s,k)=>s+by[k],0);
   if(ch2)ch2.destroy();
   ch2=new Chart(document.getElementById('chLeads'),{type:'doughnut',data:{labels:gk,datasets:[{data:gk.map(k=>by[k]),backgroundColor:gk.map(k=>gc[k]||'rgba(120,120,120,.7)'),borderWidth:2,borderColor:'#f0f3ff',hoverOffset:8}]},options:{responsive:true,maintainAspectRatio:true,plugins:{
